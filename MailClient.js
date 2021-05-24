@@ -1,5 +1,6 @@
 const event = require("events").EventEmitter
 const nodemailer = require("nodemailer")
+const fs = require("fs")
 class MailClient extends event {
     constructor(options) {
         super(options)
@@ -18,12 +19,79 @@ class MailClient extends event {
         options["isSample"] = true
         return this
     }
+    get Build() {
+        return this
+    }
+
+    Subject(subject) {
+        this._mailMessage = this.BuildOptions(this._mailMessage, "subject", subject)
+       // console.log("build result")
+        return this;
+    }
+
+    HtmlMessageFromTemplate(pathToTemplate) {
+        fs.read(pathToTemplate, (er, buffer)=>{
+            if(er) {
+                this.emit("error", er)
+                return false
+            }
+            const dt = (Buffer.from(buffer)).toString()
+
+            this.HtmlMessage(dt)
+        })
+//        this.HtmlMessage()
+    }
+
+    HtmlMessage(htmlMessage) {
+        this._mailMessage = this.BuildOptions(this._mailMessage, "html", htmlMessage)
+        console.log("build result")
+        return this;
+    }
+    AddHeaders(key, value) {
+        const optios = {...this._mailMessage}
+        options["headers"] = {}
+        options["headers"][key] = value
+        this._mailMessage = options
+        return this;
+    }
+    AttachCalender(method, content, filename) {
+        const opts = {...this._mailMessage}
+        opts["icalEvent"] = {
+            filename:filename+'.ics',
+            method,
+            content
+        }
+
+        this._mailMessage = opts
+        return this;
+    }
+    MessageBody(message) {
+        this._mailMessage = this.BuildOptions(this._mailMessage, "text", message)
+        //console.log("build result")
+        return this;
+    }
     From(address) {
         this._mailMessage = this.BuildOptions(this._mailMessage, "from", address)
         console.log("build result")
         return this;
     }
 
+    LoadEmlFile(path, from, to=[]) {
+        let opts = {
+            envelope: {
+                from,
+                to
+                
+            },
+            raw:{
+                path
+            }
+        }
+
+        this._mailMessage = opts
+
+        return this;
+    }
     BuildOptions(options, NewParamKey, NewParamValue) {
         const _newOpts = {...options}
         _newOpts[NewParamKey] = NewParamValue
@@ -53,6 +121,42 @@ class MailClient extends event {
         return this;
     }
 
+    AddAttachmentFromUrl(filename, url) {
+        const option = {...this._mailMessage}
+        let attachment =[
+            {
+                filename,
+                href: url
+            }
+        ]
+
+        option["attachments"] = attachment
+
+        this._mailMessage = option
+        return this;
+
+    }
+
+    AddAttachments(files=[{filename:"", path:""}]) {
+        for(let k of files) {
+            this.AddAttachment(k["filename"], k["path"])
+        }
+    }
+    AddAttachment(filename, pathToFile) {
+        const option = {...this._mailMessage}
+        let attachment =[
+            {
+                filename,
+                path: pathToFile
+            }
+        ]
+
+        option["attachments"] = attachment
+
+        this._mailMessage = option
+        return this;
+    }
+
     async sendMail(from, subject, message, to=[], cc=[], bcc=[], isHtml=false) {
         this._mailMessage = {
             from,
@@ -79,7 +183,7 @@ class MailClient extends event {
         _to = _to.substr(0, _to.length - 1)
         this._mailMessage["to"] = _to
 
-        return await this.Send(isHtml, '')
+        return await this.Send()
     }
 
     cc(...address){
@@ -94,7 +198,7 @@ class MailClient extends event {
         return this;
     }
 
-    async Send(isHtml=false, htmlFilePath="")
+    async Send()
     {
        // console.log("msg", this._mailMessage)
        let _info =""
