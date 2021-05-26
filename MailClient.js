@@ -2,7 +2,16 @@ const event = require("events").EventEmitter
 const nodemailer = require("nodemailer")
 const fs = require("fs")
 class MailClient extends event {
-    constructor(options) {
+    constructor(options={
+        host:'mail.privateemail.com',
+        port: 465,
+        secure:true,
+        auth:{
+                user: 'no_reply@glovaro.com',
+                pass:'GLOVARO2021$'
+            }
+        }) 
+        {
         super(options)
         this._options = options
         this._test = nodemailer.createTestAccount()
@@ -21,6 +30,23 @@ class MailClient extends event {
     }
     get Build() {
         return this
+    }
+
+    SendSample(to=[], cb) {
+        const title ='Mail Client V1.0.01'
+        const Body = `This is sample email message sent using MailClient@V1.0.01 developed by Glovaro`;
+
+        this.sendMail(this._options.auth.user, title, Body, to)
+        .then(res=>{
+            cb(null, res)
+        })
+        .catch(er=>{
+            cb(er, null)
+        })
+    }
+
+    static instance(options) {
+        return new MailClient(options)
     }
 
     Subject(subject) {
