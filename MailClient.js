@@ -1,6 +1,8 @@
+const EmailTemplate = require("email-templates").EmailTemplate
 const event = require("events").EventEmitter
 const nodemailer = require("nodemailer")
 const fs = require("fs")
+const {MailTemplateWriter} = require("./MailTemplate")
 class MailClient extends event {
     constructor(options={
         host:'mail.privateemail.com',
@@ -12,12 +14,14 @@ class MailClient extends event {
             }
         }) 
         {
-        super(options)
-        this._options = options
-        this._test = nodemailer.createTestAccount()
-        const that = this;
-        this._mail = nodemailer.createTransport(options)
-        this._mailMessage = {}
+            super(options)
+            this._mailTemplateWriter = new MailTemplateWriter()
+            this._options = options
+            this._emailTemplate = EmailTemplate
+            this._test = nodemailer.createTestAccount()
+            const that = this;
+            this._mail = nodemailer.createTransport(options)
+            this._mailMessage = {}
     }
 
     MailMessage(subject, messabeBody) {
@@ -93,12 +97,12 @@ class MailClient extends event {
     }
     MessageBody(message) {
         this._mailMessage = this.BuildOptions(this._mailMessage, "text", message)
-        //console.log("build result")
+             
         return this;
     }
     From(address) {
         this._mailMessage = this.BuildOptions(this._mailMessage, "from", address)
-        console.log("build result")
+       // console.log("build result")
         return this;
     }
 
@@ -163,10 +167,41 @@ class MailClient extends event {
 
     }
 
+    BuildMailFromTemplate(content, placeholder=[], replacer=[]) {
+        const _dt = this._mailTemplateWriter.WriteFromStach(content, placeholder, replacer)
+        //console.log(_dt)
+        let opts = {...this._mailMessage}
+        opts["html"] = _dt
+
+        this._mailMessage = opts;
+
+        return this;
+    }
+
+    async BuildFromTemplateFile(file) {
+
+        return new Promise((resolve, reject)=>{
+            fs.readFile(file, (er, data)=>{
+                if(!er) {
+                    let _ct = data
+
+                    var outPut = Buffer.from(_ct)
+                   
+                    resolve(outPut.toString())
+               }
+
+                reject(er)
+            })
+        })
+      
+       
+    }
     AddAttachments(files=[{filename:"", path:""}]) {
         for(let k of files) {
             this.AddAttachment(k["filename"], k["path"])
         }
+
+        return this;
     }
     AddAttachment(filename, pathToFile) {
         const option = {...this._mailMessage}
@@ -209,7 +244,7 @@ class MailClient extends event {
         _to = _to.substr(0, _to.length - 1)
         this._mailMessage["to"] = _to
 
-        return await this.Send()
+        return await this.Send(isHtml)
     }
 
     cc(...address){
@@ -224,11 +259,17 @@ class MailClient extends event {
         return this;
     }
 
-    async Send()
+    async Send(isHtml=false)
     {
        // console.log("msg", this._mailMessage)
        let _info =""
        try{
+           if(isHtml) {
+               this._mailMessage["html"] = this._mailMessage["text"]
+               
+           }
+
+          
             _info =  await this._mail.sendMail(this._mailMessage)
             this.emit('SendSuccess',_info)
             return _info;
