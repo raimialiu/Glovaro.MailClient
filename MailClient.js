@@ -5,12 +5,12 @@ const fs = require("fs")
 const {MailTemplateWriter} = require("./MailTemplate")
 class MailClient extends event {
     constructor(options={
-        host:'mail.privateemail.com',
-        port: 465,
-        secure:true,
+        host:'',
+        port: 0,
+        secure:false,
         auth:{
-                user: 'no_reply@glovaro.com',
-                pass:'GLOVARO2021$'
+                user: '',
+                pass:''
             }
         }) 
         {
