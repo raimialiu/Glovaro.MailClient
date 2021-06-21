@@ -1,0 +1,18 @@
+{
+        host:'mail.privateemail.com',
+        port: 465,
+        secure:true,
+        auth:{
+                user: 'no_reply@glovaro.com',
+                pass:'GLOVARO2021$'
+            }
+        }) 
+        {
+            super(options)
+            this._mailTemplateWriter = new MailTemplateWriter()
+            this._options = options
+            this._emailTemplate = EmailTemplate
+            this._test = nodemailer.createTestAccount()
+            const that = this;
+            this._mail = nodemailer.createTransport(options)
+            this._mailMessage = {}
